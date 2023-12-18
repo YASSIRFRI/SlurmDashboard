@@ -14,7 +14,7 @@ def collect_data(ssh_host, ssh_username, ssh_password):
         command = "sacct -p -a -o user,account,reqcpus,alloccpus"
         stdin, stdout, stderr = ssh.exec_command(command)
         result = stdout.read().decode()
-        debug=open("output.txt","w")
+        debug=open(".log","a")
         debug.write(result)
         print("result : \n",result)
         # Process output and store in a CSV file
