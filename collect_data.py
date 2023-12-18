@@ -10,23 +10,22 @@ def collect_data(ssh_host, ssh_username, ssh_password):
 
     try:
         ssh.connect(ssh_host, username=ssh_username, password=ssh_password)
-
         # Run sacctmgr command on the remote server and capture output
         command = "sacct -p -a -o user,account,reqcpus,alloccpus"
         stdin, stdout, stderr = ssh.exec_command(command)
         result = stdout.read().decode()
-        # Debug print to inspect the output
         debug=open("output.txt","w")
         debug.write(result)
         print("result : \n",result)
         # Process output and store in a CSV file
         data = [line.split('|') for line in result.strip().split('\n')]
+        print ("data : \n",data)
         columns = ['User', 'Account', 'ReqCPUS', 'AllocCPUS']
         # Ensure that the number of columns matches the expected number
         #if len(data[0]) == len(columns):
-        df = pd.DataFrame(data, columns=columns)
-        df['Timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        df.to_csv('usage_data.csv', mode='a', header=(not df.index.any()), index=False)
+        #df = pd.DataFrame(data, columns=columns)
+        #df['Timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        #df.to_csv('usage_data.csv', mode='w', header=(not df.index.any()), index=False)
         #else:
             #print(f"Unexpected number of columns in the data: {len(data[0])}")
 
@@ -35,6 +34,8 @@ def collect_data(ssh_host, ssh_username, ssh_password):
 
     finally:
         ssh.close()
+    df = pd.DataFrame(data_list, columns=columns + ['Timestamp'])
+    df.to_csv('usage_data.csv', mode='w', header=(not df.index.any()), index=False)
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:

@@ -9,15 +9,17 @@ import pandas as pd
 from dash.dependencies import Input, Output
 from threading import Thread
 
-# Load environment variables from .env file
-
 app = Flask(__name__)
 
 # Initialize Dash app
-dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
+dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/', suppress_callback_exceptions=True)
 
 # Placeholder for Dash layout
-dash_app.layout = html.Div()
+dash_app.layout = html.Div([
+    dcc.Graph(id='usage-chart'),
+    html.Button("Update Dashboard", id="trigger-update-button"),
+    dcc.Interval(id='interval-component', interval=1000, n_intervals=0)
+])
 
 def run_dash():
     dash_app.run_server(debug=False)
@@ -35,8 +37,8 @@ def dashboard():
     print("Received POST request to /dashboard")
     ssh_username = request.form['username']
     ssh_password = request.form['password']
-    ssh_host="simlab-cluster.um6p.ma"
-    #option = request.form['option']
+    ssh_host = "simlab-cluster.um6p.ma"
+    # option = request.form['option']
     # Run collect_data.py with user-provided credentials
     command = f"python collect_data.py {ssh_host} {ssh_username} {ssh_password}"
     subprocess.run(command, shell=True)
@@ -51,12 +53,13 @@ def dash_dashboard():
 # Callback to update Dash layout based on data
 @dash_app.callback(
     Output('usage-chart', 'figure'),
-    Input('interval-component', 'n_intervals')
+    Input('trigger-update-button', 'n_clicks')
 )
-def update_dashboard(n_intervals):
+def update_dashboard(n_clicks):
     # Load data from the CSV file
+    if n_clicks is None:
+        raise dash.exceptions.PreventUpdate
     df = pd.read_csv('usage_data.csv')
-
     figure = {
         'data': [
             {'x': df['User'], 'y': df['UsedCPU'], 'type': 'bar', 'name': 'Used CPU Hours'},
@@ -67,7 +70,6 @@ def update_dashboard(n_intervals):
             'yaxis': {'title': 'Used CPU Hours'},
         }
     }
-
     return figure
 
 if __name__ == '__main__':
