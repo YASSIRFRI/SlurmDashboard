@@ -3,6 +3,8 @@ import subprocess
 from datetime import datetime
 import pandas as pd
 import paramiko
+import os
+from datetime import datetime, timedelta
 
 def collect_data(ssh_host, ssh_username, ssh_password):
     ssh = paramiko.SSHClient()
@@ -10,17 +12,34 @@ def collect_data(ssh_host, ssh_username, ssh_password):
 
     try:
         ssh.connect(ssh_host, username=ssh_username, password=ssh_password)
-        # Run sacctmgr command on the remote server and capture output
-        command = "sacct -p -a -o user,account,reqcpus,alloccpus"
+
+        # Calculate start and end times for one year duration
+        end_time = datetime.now()
+        start_time = end_time - timedelta(days=30)
+        start_time_str = start_time.strftime('%Y-%m-%d')
+        end_time_str = end_time.strftime('%Y-%m-%d')
+
+        # Run sacct command on the remote server with the specified time range
+        command = f"sacct -P -o JobID,User,AllocCPUS,AllocGRES,Start,End,Elapsed --allusers --duplicates --starttime={start_time_str} --endtime={end_time_str}"
         stdin, stdout, stderr = ssh.exec_command(command)
         result = stdout.read().decode()
-        debug=open(".log","a")
-        debug.write(result)
-        print("result : \n",result)
+
+        # debug=open(".log","a")
+        # debug.write(result)
+        # print("result : \n",result)
+
         # Process output and store in a CSV file
-        data = [line.split('|') for line in result.strip().split('\n')]
-        print ("data : \n",data)
-        columns = ['User', 'Account', 'ReqCPUS', 'AllocCPUS']
+        data = [line.split('|') for line in result.strip().split('\n')[1:]]
+        print("data : \n",data)
+        columns = ['JobID', 'User', 'AllocCPUS', 'AllocGRES', 'Start', 'End', 'Elapsed']
+        df = pd.DataFrame(data, columns=columns)
+        # df['Timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Check if CSV file exists and append or create new file accordingly
+        csv_file = 'usage_data.csv'
+        file_exists = os.path.isfile(csv_file)
+        df.to_csv(csv_file, mode='a', header=not file_exists, index=False)
+
         # Ensure that the number of columns matches the expected number
         #if len(data[0]) == len(columns):
         #df = pd.DataFrame(data, columns=columns)
@@ -34,8 +53,7 @@ def collect_data(ssh_host, ssh_username, ssh_password):
 
     finally:
         ssh.close()
-    df = pd.DataFrame(data_list, columns=columns + ['Timestamp'])
-    df.to_csv('usage_data.csv', mode='w', header=(not df.index.any()), index=False)
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
@@ -47,3 +65,4 @@ if __name__ == "__main__":
     ssh_password = sys.argv[3]
 
     collect_data(ssh_host, ssh_username, ssh_password)
+
