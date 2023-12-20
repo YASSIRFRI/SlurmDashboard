@@ -56,11 +56,13 @@ def serve_layout():
     slurm_users = get_slurm_users()  # Fetch users from Slurm DB
 
     return html.Div([
+        # User selection dropdown
         dcc.Dropdown(
             id='user-dropdown',
             options=[{'label': user, 'value': user} for user in slurm_users],
             value=None
         ),
+        # Timeframe selection
         dcc.Dropdown(
             id='timeframe-dropdown',
             options=[
@@ -79,11 +81,60 @@ def serve_layout():
             ],
             value=30  # Default value set to 1 month ago
         ),
-        dcc.Graph(id='usage-graph')
+        # Graph display
+        dcc.Graph(id='usage-graph'),
+        # Toggle between CPU usage and Hours usage
+        dcc.RadioItems(
+            id='graph-type',
+            options=[
+                {'label': 'CPU Usage', 'value': 'cpu'},
+                {'label': 'Hours Usage', 'value': 'hours'}
+            ],
+            value='cpu'
+        )
     ])
 
 # Set the layout to the serve_layout function
 dash_app.layout = serve_layout
+
+
+# Callback to update the graph based on user and timeframe selection
+@dash_app.callback(
+    Output('usage-graph', 'figure'),
+    [Input('user-dropdown', 'value'), Input('graph-type', 'value'), Input('timeframe-dropdown', 'value')]
+)
+def update_graph(selected_user, selected_graph, selected_timeframe):
+    global ssh
+    if not selected_user or not ssh:
+        return go.Figure()  # Return an empty figure if no user is selected or if SSH connection fails
+
+    # Collect data for the selected user and timeframe
+    dataframe = collect_data(ssh, selected_user, selected_timeframe)
+
+    if dataframe.empty:
+        # Return a figure with a message if the dataframe is empty
+        return go.Figure(
+            data=[go.Scatter(x=[], y=[])],
+            layout=go.Layout(
+                title="No data available for this user during this period of time",
+                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False)
+            )
+        )
+
+    # Depending on the selected graph type, create and return the appropriate figure
+    if selected_graph == 'cpu':
+        # Calculate daily CPU usage
+        daily_cpu_usage = calculate_daily_cpu_usage(dataframe)
+        # Generate the CPU usage bar chart figure
+        fig = px.bar(daily_cpu_usage, x='Date', y='TotalCPUs', title='Daily CPU Usage')
+        fig.update_layout(xaxis_title='Date', yaxis_title='Total CPUs Used')
+    else:
+        # Create Hours usage graph
+        daily_hours_usage = calculate_daily_hours_usage(dataframe)
+        fig = px.bar(daily_hours_usage, x='Date', y='Hours', title='Daily Hours Usage')
+
+    return fig
 
 
 # Helper function to calculate daily CPU usage
@@ -106,37 +157,53 @@ def calculate_daily_cpu_usage(df):
     return daily_cpu_usage
 
 
-# Callback to update the graph based on user and timeframe selection
-@dash_app.callback(
-    Output('usage-graph', 'figure'),
-    [Input('user-dropdown', 'value'), Input('timeframe-dropdown', 'value')]
-)
-def update_graph(selected_user, selected_timeframe):
-    global ssh
-    if not selected_user or not ssh:
-        return go.Figure()  # Return an empty figure if no user is selected or if SSH connection fails
+# Helper function to calculate daily Hours usage
+# This function computes the sum of daily usage hours per user.
+# It returns the summed totals grouped by user and date.
+def calculate_daily_hours_usage(df):
+    # Create a copy of the DataFrame to avoid modifying the original DataFrame
+    df = df.copy()
+    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+    print(df)
+    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
-    # Collect data for the selected user and timeframe
-    dataframe = collect_data(ssh, selected_user, selected_timeframe)
+    # Apply the function
+    daily_usage_data = [usage for idx, row in df.iterrows() for usage in calculate_daily_usage(row)]
+    daily_usage_df = pd.DataFrame(daily_usage_data)
 
-    if dataframe.empty:
-        # Return a figure with a message if the dataframe is empty
-        return go.Figure(
-            data=[go.Scatter(x=[], y=[])],
-            layout=go.Layout(
-                title="No data available for this user during this period of time",
-                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                yaxis=dict(showgrid=False, showticklabels=False, zeroline=False)
-            )
-        )
+    print(daily_usage_df)
+    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
-    # Calculate daily CPU usage (if needed)
-    daily_cpu_usage = calculate_daily_cpu_usage(dataframe)
+    # Group by User and Date, then sum the Hours
+    grouped_df = daily_usage_df.groupby(['User', 'Date'])['Hours'].sum().reset_index()
 
-    # Generate and return the bar chart figure
-    fig = px.bar(daily_cpu_usage, x='Date', y='TotalCPUs', title='Daily CPU Usage')
-    fig.update_layout(xaxis_title='Date', yaxis_title='Total CPUs Used')
-    return fig
+    print(grouped_df)
+    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+
+    return grouped_df
+
+
+# This function takes a row from a DataFrame representing record with 'Start' and 'End' timestamps.
+# It calculates the daily usage in hours for each date within the range from 'Start' to 'End'. 
+# The function returns a list of dictionaries, each containing the original row data plus 'Date' and 'Hours' keys for every day the usage spans. If a usage period extends over multiple days, it splits the hours accordingly for each day.
+def calculate_daily_usage(row):
+    start_date = row['Start'].date()
+    end_date = row['End'].date()
+    current_date = start_date
+    usage_per_day = []
+
+    while current_date <= end_date:
+        next_day = pd.Timestamp(current_date + pd.Timedelta(days=1))
+        daily_end = min(row['End'], next_day)
+        daily_hours = (daily_end - max(row['Start'], pd.Timestamp(current_date))).total_seconds() / 3600
+        if daily_hours > 0:
+            usage = row.to_dict()
+            usage.update({'Date': current_date, 'Hours': daily_hours})
+            usage_per_day.append(usage)
+        current_date += pd.Timedelta(days=1)
+
+    return usage_per_day
+
 
 
 

@@ -1,4 +1,3 @@
-# ssh_connection.py
 import paramiko
 
 def establish_ssh_connection(ssh_host, ssh_username, ssh_password):

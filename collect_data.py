@@ -1,8 +1,10 @@
-# collect_data.py
 from datetime import datetime, timedelta
 import pandas as pd
 import os
 
+# This function calculates the start and end times based on the number of days specified.
+# It constructs and executes an sacct command to collect data for a specified user within the timeframe.
+# Finally, it processes the command output and converts it into a DataFrame.
 def collect_data(ssh, user, days=30):
     # Calculate start and end times for the specified duration
     end_time = datetime.now()
@@ -20,6 +22,9 @@ def collect_data(ssh, user, days=30):
     # print("data : \n",data)
     columns = ['JobID', 'User', 'AllocCPUS', 'AllocGRES', 'Start', 'End', 'Elapsed']
     df = pd.DataFrame(data, columns=columns)
+
+    # Filter out batch entries
+    df = df[df['User'] != ""]
 
     # Convert Start and End to datetime
     df['Start'] = pd.to_datetime(df['Start'], errors='coerce')
