@@ -6,8 +6,14 @@ from dash.dependencies import Input, Output
 import plotly.express as px
 from threading import Thread
 from ssh_connection import establish_ssh_connection
-from collect_data import collect_data
+from collect_data import collect_data_days_based, collect_data_datetime_based
 import plotly.graph_objs as go
+from dash_core_components import DatePickerRange
+from datetime import datetime, timedelta
+from dash.dependencies import Input, Output, State
+from dash import Dash, html, Input, Output, callback
+import dash_daq as daq
+
 
 global ssh
 
@@ -54,62 +60,114 @@ def dashboard():
 # Function to serve the layout, called each time the page is loaded
 def serve_layout():
     slurm_users = get_slurm_users()  # Fetch users from Slurm DB
-
     return html.Div([
-        # User selection dropdown
-        dcc.Dropdown(
-            id='user-dropdown',
-            options=[{'label': user, 'value': user} for user in slurm_users],
-            value=None
-        ),
-        # Timeframe selection
-        dcc.Dropdown(
-            id='timeframe-dropdown',
-            options=[
-                {'label': '1 Month Ago', 'value': 30},
-                {'label': '2 Months Ago', 'value': 60},
-                {'label': '3 Months Ago', 'value': 90},
-                {'label': '4 Months Ago', 'value': 120},
-                {'label': '5 Months Ago', 'value': 150},
-                {'label': '6 Months Ago', 'value': 180},
-                {'label': '7 Months Ago', 'value': 210},
-                {'label': '8 Months Ago', 'value': 240},
-                {'label': '9 Months Ago', 'value': 270},
-                {'label': '10 Months Ago', 'value': 300},
-                {'label': '11 Months Ago', 'value': 330},
-                {'label': '1 Year Ago', 'value': 365}
-            ],
-            value=30  # Default value set to 1 month ago
-        ),
-        # Graph display
-        dcc.Graph(id='usage-graph'),
-        # Toggle between CPU usage and Hours usage
-        dcc.RadioItems(
-            id='graph-type',
-            options=[
-                {'label': 'CPU Usage', 'value': 'cpu'},
-                {'label': 'Hours Usage', 'value': 'hours'}
-            ],
-            value='cpu'
-        )
-    ])
+    # Sidebar
+    html.Div([
+        html.H2("Filters", style={'textAlign': 'center', 'font-family': 'fantasy'}),
+            # User selection dropdown
+            dcc.Dropdown(
+                id='user-dropdown',
+                options=[{'label': user, 'value': user} for user in slurm_users],
+                value=None
+            ),
+            html.Div([
+                html.Label('Choose Date Selection Mode:'),
+                daq.BooleanSwitch(
+                    id='date-selection-toggle',
+                    on=True,  # Initially on
+                    labelPosition="top",
+                    color="#9B51E0",
+                ),
+            ], style={'display': 'flex', 'alignItems': 'center', 'justifyContent': 'center'}),
+            # Date Picker Range
+            DatePickerRange(
+                id='date-picker-range',
+                min_date_allowed=datetime(1995, 8, 5),  # Adjust as needed
+                max_date_allowed=datetime.now(),
+                initial_visible_month=datetime.now(),
+                start_date=datetime.now() - timedelta(days=30),  # Default to 30 days ago
+                end_date=datetime.now(),
+                style={'display': 'block'}  # Initially visible
+            ),
+            # Timeframe selection
+            dcc.Dropdown(
+                id='timeframe-dropdown',
+                options=[
+                    {'label': '1 Month Ago', 'value': 30},
+                    {'label': '2 Months Ago', 'value': 60},
+                    {'label': '3 Months Ago', 'value': 90},
+                    {'label': '4 Months Ago', 'value': 120},
+                    {'label': '5 Months Ago', 'value': 150},
+                    {'label': '6 Months Ago', 'value': 180},
+                    {'label': '7 Months Ago', 'value': 210},
+                    {'label': '8 Months Ago', 'value': 240},
+                    {'label': '9 Months Ago', 'value': 270},
+                    {'label': '10 Months Ago', 'value': 300},
+                    {'label': '11 Months Ago', 'value': 330},
+                    {'label': '1 Year Ago', 'value': 365}
+                ],
+                value=30  # Default value set to 1 month ago
+            ),
+            # Toggle between CPU usage and Hours usage
+            dcc.RadioItems(
+                id='graph-type',
+                options=[
+                    {'label': 'CPU/GPU Usage', 'value': 'cpu_gpu'},
+                    {'label': 'Hours Usage', 'value': 'hours'}
+                ],
+                value='cpu_gpu'
+            )
+    ], style={'width': '20%', 'float': 'left', 'height': '100vh', 'borderRight': '2px solid grey', 'padding': '20px', 'background-color': ''}),
+
+    # Main content area
+    html.Div([
+        html.H2("Visualize the results", style={'textAlign': 'center', 'font-family': 'fantasy'}),
+        dcc.Graph(id='usage-graph')
+    ], style={'width': '70%', 'float': 'right', 'padding': '20px', 'background-color': ""})
+])
 
 # Set the layout to the serve_layout function
 dash_app.layout = serve_layout
+
+@dash_app.callback(
+    [Output('date-picker-range', 'style'),
+     Output('timeframe-dropdown', 'style')],
+    [Input('date-selection-toggle', 'on')]
+)
+def toggle_date_input(toggle_value):
+    if toggle_value:
+        return {'display': 'block'}, {'display': 'none'}
+    else:
+        return {'display': 'none'}, {'display': 'block'}
 
 
 # Callback to update the graph based on user and timeframe selection
 @dash_app.callback(
     Output('usage-graph', 'figure'),
-    [Input('user-dropdown', 'value'), Input('graph-type', 'value'), Input('timeframe-dropdown', 'value')]
+    [Input('user-dropdown', 'value'), 
+     Input('graph-type', 'value'), 
+     Input('timeframe-dropdown', 'value'),
+     Input('date-picker-range', 'start_date'),
+     Input('date-picker-range', 'end_date'),
+     Input('date-selection-toggle', 'on')]  # Add toggle switch's state as input]
 )
-def update_graph(selected_user, selected_graph, selected_timeframe):
+def update_graph(selected_user, selected_graph, selected_timeframe, start_date, end_date, toggle_switch_state):
     global ssh
     if not selected_user or not ssh:
         return go.Figure()  # Return an empty figure if no user is selected or if SSH connection fails
+    
+    # Initialize an empty DataFrame
+    dataframe = pd.DataFrame()
 
-    # Collect data for the selected user and timeframe
-    dataframe = collect_data(ssh, selected_user, selected_timeframe)
+    # Determine data collection method based on toggle switch state
+    if toggle_switch_state:
+        # Custom date range selected
+        if start_date and end_date:
+            dataframe = collect_data_datetime_based(ssh, selected_user, start_date, end_date)
+    else:
+        # Predefined timeframe selected
+        if selected_timeframe is not None:
+            dataframe = collect_data_days_based(ssh, selected_user, selected_timeframe)
 
     if dataframe.empty:
         # Return a figure with a message if the dataframe is empty
@@ -123,12 +181,12 @@ def update_graph(selected_user, selected_graph, selected_timeframe):
         )
 
     # Depending on the selected graph type, create and return the appropriate figure
-    if selected_graph == 'cpu':
-        # Calculate daily CPU usage
-        daily_cpu_usage = calculate_daily_cpu_usage(dataframe)
-        # Generate the CPU usage bar chart figure
-        fig = px.bar(daily_cpu_usage, x='Date', y='TotalCPUs', title='Daily CPU Usage')
-        fig.update_layout(xaxis_title='Date', yaxis_title='Total CPUs Used')
+    if selected_graph == 'cpu_gpu':
+        # Calculate daily CPU/GPU usage
+        daily_usage = calculate_daily_cpu_gpu_usage(dataframe)
+        # Generate the CPU/GPU usage bar chart figure
+        fig = px.bar(daily_usage, x='Date', y=['TotalCPUs', 'TotalGPUs'], title='Daily CPU and GPU Usage', labels={'value':'Usage', 'variable':'Resource'})
+        fig.update_layout(xaxis_title='Date', yaxis_title='Usage')
     else:
         # Create Hours usage graph
         daily_hours_usage = calculate_daily_hours_usage(dataframe)
@@ -138,24 +196,29 @@ def update_graph(selected_user, selected_graph, selected_timeframe):
 
 
 # Helper function to calculate daily CPU usage
-def calculate_daily_cpu_usage(df):
-    # Create a copy of the DataFrame to avoid modifying the original DataFrame
+def calculate_daily_cpu_gpu_usage(df):
     df = df.copy()
 
-    # Initialize a DataFrame to store daily CPU usage
-    daily_cpu_usage = pd.DataFrame()
-
+    daily_data = []
     for _, row in df.iterrows():
-        # Generate a date range for each row
         date_range = pd.date_range(start=row['Start'].date(), end=row['End'].date(), freq='D')
-        temp_df = pd.DataFrame({'Date': date_range, 'TotalCPUs': [row['AllocCPUS']] * len(date_range)})
-        daily_cpu_usage = pd.concat([daily_cpu_usage, temp_df], ignore_index=True)
+        temp_df = pd.DataFrame({
+            'Date': date_range, 
+            'TotalCPUs': [row['AllocCPUS']] * len(date_range),
+            'TotalGPUs': [row['NumGPUs']] * len(date_range)
+        })
+        daily_data.append(temp_df)
 
-    # Aggregate total CPUs per day
-    daily_cpu_usage['TotalCPUs'] = pd.to_numeric(daily_cpu_usage['TotalCPUs'], errors='coerce')
-    daily_cpu_usage = daily_cpu_usage.groupby('Date')['TotalCPUs'].sum().reset_index()
-    return daily_cpu_usage
+    daily_cpu_gpu_usage = pd.concat(daily_data, ignore_index=True)
 
+    # Convert columns to numeric, handling non-numeric data
+    daily_cpu_gpu_usage['TotalCPUs'] = pd.to_numeric(daily_cpu_gpu_usage['TotalCPUs'], errors='coerce')
+    daily_cpu_gpu_usage['TotalGPUs'] = pd.to_numeric(daily_cpu_gpu_usage['TotalGPUs'], errors='coerce')
+
+    # Group by date and sum both CPUs and GPUs
+    daily_cpu_gpu_usage = daily_cpu_gpu_usage.groupby('Date').sum().reset_index()
+
+    return daily_cpu_gpu_usage
 
 # Helper function to calculate daily Hours usage
 # This function computes the sum of daily usage hours per user.
@@ -163,22 +226,22 @@ def calculate_daily_cpu_usage(df):
 def calculate_daily_hours_usage(df):
     # Create a copy of the DataFrame to avoid modifying the original DataFrame
     df = df.copy()
-    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-    print(df)
-    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+    # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+    # print(df)
+    # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
     # Apply the function
     daily_usage_data = [usage for idx, row in df.iterrows() for usage in calculate_daily_usage(row)]
     daily_usage_df = pd.DataFrame(daily_usage_data)
 
-    print(daily_usage_df)
-    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+    # print(daily_usage_df)
+    # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
     # Group by User and Date, then sum the Hours
     grouped_df = daily_usage_df.groupby(['User', 'Date'])['Hours'].sum().reset_index()
 
-    print(grouped_df)
-    print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+    # print(grouped_df)
+    # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
     return grouped_df
 
