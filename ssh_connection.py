@@ -1,5 +1,6 @@
 import paramiko
 
+# Function to establish the ssh connection
 def establish_ssh_connection(ssh_host, ssh_username, ssh_password):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
