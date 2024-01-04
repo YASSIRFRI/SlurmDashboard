@@ -10,7 +10,7 @@ This project is designed to provide an efficient way to monitor and display the 
 - **User Dropdown Menu:** Displays all users of the cluster, allowing for specific user analysis.
 - **Timeframe Filtering:** Offers predefined timeframes (e.g., 1 month ago, 2 months ago, ..., up to 1 year ago) or a custom timeframe.
 ![Custom Timeframe](images/CustomTimeframe.png)
-![Predefined Timeframes](images/predefinedTimeframe.png)
+![Predefined Timeframes](images/PredefinedTimeframe.png)
 - **Visualization Options:** Choose between two plots:
     - Number of CPUs/GPUs used
     - Number of hours of CPU/GPU usage
