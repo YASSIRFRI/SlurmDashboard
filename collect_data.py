@@ -107,9 +107,10 @@ def preprocess_data(result):
     df.drop(columns=['ElapsedTime_td', 'CPUTime_td', 'GPUTime_td'], inplace=True)
 
     # Check if CSV file exists and append or create new file accordingly
-    csv_file = 'usage_data.csv'
-    file_exists = os.path.isfile(csv_file)
-    df.to_csv(csv_file, mode='a', header=not file_exists, index=False)
+    # We do not read from the csv file. Instead we directly use the generated dataframe. These lines are kept for debugging purposes.
+    # csv_file = 'usage_data.csv'
+    # file_exists = os.path.isfile(csv_file)
+    # df.to_csv(csv_file, mode='a', header=not file_exists, index=False)
 
     return df
 
