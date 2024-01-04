@@ -8,7 +8,7 @@ This project is designed to provide an efficient way to monitor and display the 
 - **SSH Connection:** Connects to SimLab using SSH for data retrieval.
 ![Dashboard](images/Dashboard.png)
 - **User Dropdown Menu:** Displays all users of the cluster, allowing for specific user analysis.
-- **Timeframe Filtering:** Offers predefined timeframes (e.g., 1 month ago, 1 year ago) or a custom timeframe.
+- **Timeframe Filtering:** Offers predefined timeframes (e.g., 1 month ago, 2 months ago, ..., up to 1 year ago) or a custom timeframe.
 ![Custom Timeframe](images/CustomTimeframe.png)
 ![Predefined Timeframes](images/predefinedTimeframe.png)
 - **Visualization Options:** Choose between two plots:
@@ -19,7 +19,7 @@ This project is designed to provide an efficient way to monitor and display the 
 ![Option 2](images/Option2.png)
 
 ## How to Use
-1. **Start the Application:** Launch the tool and navigate to the login page.
+1. **Start the Application:** Launch the app and navigate to the login page.
 2. **Login:** Enter your SimLab credentials and connect.
 3. **Select User and Timeframe:** From the dropdown menu, select the user and specify the timeframe for the analysis.
 4. **Choose and View Plot:** Select the desired plot type and view the graphical representation of resource usage.
