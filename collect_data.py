@@ -51,7 +51,7 @@ def collect_data_datetime_based(ssh, user, start_date, end_date):
     
     # Define the expected header
     expected_header = "JobID|User|AllocCPUS|AllocGRES|Start|End"
-
+ 
     # Check if result contains only the header (i.e. if the result is empty)
     if result.strip() == expected_header: 
         return pd.DataFrame() 

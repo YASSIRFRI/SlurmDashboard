@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, session
 import pandas as pd
 import dash
 from dash import dcc, html
@@ -14,16 +14,21 @@ from dash import html, Input, Output
 import dash_daq as daq
 import dash_bootstrap_components as dbc
 from dash_bootstrap_templates import load_figure_template
+from dash_iconify import DashIconify
 
 # Load template
 load_figure_template("bootstrap_dark")
 
 ssh = None
+ssh_username = ""
 
-app = Flask(__name__, static_url_path="/templates")
+app = Flask(__name__)
+
+# Set the secret key for session management.
+app.secret_key = 'software_engineer'
 
 # Initialize Dash app within Flask app 
-dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/', external_stylesheets=[dbc.themes.BOOTSTRAP, "https://fonts.googleapis.com/css2?family=Rubik&display=swap"])
+dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/', external_stylesheets=[dbc.themes.BOOTSTRAP, "https://fonts.googleapis.com/css2?family=Rubik&display=swap", "https://use.fontawesome.com/releases/v5.7.2/css/all.css"])
 
 # Function to get all the users. These users will be displayed in the dropdown menu
 def get_slurm_users():
@@ -48,9 +53,10 @@ def get_slurm_users():
 def index():
     return render_template('login.html')
 
-@app.route('/dashboard', methods=['POST'])
-def dashboard():
+@app.route('/login', methods=['POST'])
+def login():
     global ssh
+    global ssh_username
     ssh_username = request.form['username']
     ssh_password = request.form['password']
     ssh_host = "simlab-cluster.um6p.ma"
@@ -58,14 +64,38 @@ def dashboard():
     # Establish SSH connection
     ssh = establish_ssh_connection(ssh_host, ssh_username, ssh_password)
     if ssh:
+        session['username'] = ssh_username
+        session['logged_in'] = True
         return redirect('/dashboard/')
     else:
         return render_template('login.html', error="SSH connection failed")
 
+@app.route('/dashboard')
+def dashboard_view():
+    if 'logged_in' in session:
+        return dash_app.index()
+    else:
+        return redirect('/')
+
+@app.route('/logout')
+def logout():
+    global ssh
+    if ssh:
+        ssh.close()  # Close the SSH connection
+        ssh = None   # Reset the global variable
+    session.pop('logged_in', None)  # Clear the session variable
+    # Redirect to the login page
+    return redirect('/')
+
 
 # Function to serve the layout, called each time the page is loaded
 def serve_layout():
+    global ssh_username
     slurm_users = get_slurm_users()  # Fetch users from Slurm DB
+
+    # Logout Icon
+    icon = DashIconify(icon="line-md:log-out", width=20)
+
     return html.Div([
     # Sidebar
     html.Div([
@@ -170,8 +200,32 @@ def serve_layout():
                 )
                 ],
                 style={}
-            )
+            ),
+            # Logout button
+            html.Div([
+                icon,
+                html.A("Logout", href="/logout", style={
+                    'color': 'white',
+                    'display': 'flex', 
+                    'alignItems': 'center', 
+                    'justifyContent': 'center',
+                    "text-decoration": "none",
+                    'margin-left': '5px'})
+            ], style={
+                    "position": "absolute",
+                    "bottom": "50px",
+                    "left": "50%",
+                    'margin-left': '-75px',
+                    'display': 'flex', 
+                    'alignItems': 'center', 
+                    'justifyContent': 'center', 
+                    'justifyContent': 'center',
+                    'color': 'white',
+                    'border': '1px solid #ccc',
+                    'padding': '10px',
+                    'width': '150px'})
     ], style={
+        "position": 'relative',
         'display': 'flex',  
         'flexDirection': 'column',  
         'justifyContent': 'center', 
@@ -186,6 +240,18 @@ def serve_layout():
     
     # Main content area
     html.Div([
+        html.Div([dbc.Button(
+                [
+                    f"Hello, {ssh_username}!",
+                ],
+                color="dark",
+                className="me-1"
+            )],
+            style={"position": "relative",
+                   "cursor": "context-menu",
+                   'font-weight': 'bold'
+                   }
+        ), 
         html.H2("Visualize the results", style={'textAlign': 'center', 'color': '#000', 'font-weight': 'bold'}),
         dcc.Graph(id='usage-graph')
     ], style={
