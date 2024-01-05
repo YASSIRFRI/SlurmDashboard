@@ -20,7 +20,7 @@ load_figure_template("bootstrap_dark")
 
 ssh = None
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path="/templates")
 
 # Initialize Dash app within Flask app 
 dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/', external_stylesheets=[dbc.themes.BOOTSTRAP, "https://fonts.googleapis.com/css2?family=Rubik&display=swap"])
