@@ -51,9 +51,8 @@ These data processing steps enable the creation of accurate visual representatio
 
 
 ## How to Use
-1. **Start the Application:** Launch the app and navigate to the login page.
-2. **Login:** Enter your SimLab credentials and connect.
-3. **Select User and Timeframe:** From the dropdown menu, select the user and specify the timeframe for the analysis.
-4. **Choose and View Plots:** Select the desired plot type and view the graphical representation of resource usage.
-4. **Logout** 
-
+1. **Launching the Application:** Navigate to the application folder and execute the command `python app.py` to initiate the application.
+2. **Logging In:** Enter your SimLab credentials to establish a secure connection.
+3. **User and Timeframe Selection:** Utilize the dropdown menu to select a specific user and define the timeframe for analysis.
+4. **Plot Selection:** Choose the desired plot type to visualize resource usage data effectively.
+5. **Logging Out:** Securely exit the application upon completion of analysis.
