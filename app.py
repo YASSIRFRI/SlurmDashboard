@@ -245,12 +245,12 @@ def serve_layout():
                     f"Hello, {ssh_username}",
                 ],
                 color="dark",
-                className="me-1"
+                style={
+                    "cursor": "context-menu",   
+                    'font-size': '18px'
+                    }
             )],
-            style={"position": "relative",
-                   "cursor": "context-menu",
-                   'font-weight': 'bold'
-                   }
+            style={"position": "relative"}
         ), 
         html.H2("Visualize the results", style={'textAlign': 'center', 'color': '#000', 'font-weight': 'bold'}),
         dcc.Graph(id='usage-graph')
