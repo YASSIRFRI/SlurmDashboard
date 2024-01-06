@@ -2,12 +2,10 @@
 
 
 ## Table of Contents
-- [CPU \& GPU Usage Dashboard](#cpu--gpu-usage-dashboard)
-  - [Table of Contents](#table-of-contents)
-  - [Introduction](#introduction)
-  - [Features](#features)
-  - [Data Processing with Pandas](#data-processing-with-pandas)
-  - [How to Use](#how-to-use)
+- [Introduction](#introduction)
+- [Features](#features)
+- [Data Processing with Pandas](#data-processing-with-pandas)
+- [How to Use](#how-to-use)
 
 
 ## Introduction
