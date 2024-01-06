@@ -43,8 +43,8 @@ Upon user selection of a specific user and timeframe, the application undertakes
     - **Job Duration Segmentation:** For each job entry, the system dissects it into multiple rows, corresponding to individual days within the job's duration. Each new row includes fields like 'JobID', 'User', 'AllocCPUS', 'AllocGRES', 'Date', 'ElapsedTime', and 'NumGPUs'. The 'Date' field signifies each day the job runs, 'ElapsedTime' denotes the duration of that day's segment of the job, while the other fields retain the same values as the original job entry.
     - **Calculating CPUTime and GPUTime:** Derives the CPU and GPU times for each day.
     - **Aggregation:** Groups the data by day and computes the sums:
-        - For the second plot: The CPU/GPU times of each day.
         - For the first plot: The number of CPUs/GPUs for each day.
+        - For the second plot: The CPU/GPU times of each day.
 
 These data processing steps enable the creation of accurate visual representations, facilitating a comprehensive analysis of resource usage over the selected timeframe for the specified user on the SimLab cluster.
 
