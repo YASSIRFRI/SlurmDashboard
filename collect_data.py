@@ -63,9 +63,9 @@ def collect_data_datetime_based(ssh, user, start_date, end_date):
 def preprocess_data(result):
     df = pd.DataFrame()
 
-    # Process output and store in a CSV file
+    # Process output
     data = [line.split('|') for line in result.strip().split('\n')[1:]]
-    # print("data : \n",data)
+    
     columns = ['JobID', 'User', 'AllocCPUS', 'AllocGRES', 'Start', 'End']
     df = pd.DataFrame(data, columns=columns)
 
