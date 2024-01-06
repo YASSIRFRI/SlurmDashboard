@@ -242,7 +242,7 @@ def serve_layout():
     html.Div([
         html.Div([dbc.Button(
                 [
-                    f"Hello, {ssh_username}!",
+                    f"Hello, {ssh_username}",
                 ],
                 color="dark",
                 className="me-1"
